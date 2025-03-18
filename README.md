@@ -19,12 +19,51 @@
 
 ### Commit 2 Reflection notes
 
-![](/images/Module 6/milestone_2.png)
+![](/images/module_6/milestone_2.png)
 
 - The modifications made to the handle_connection() method, as well as the creation of a HTML file (hello.html), allow for a HTML response to be returned and the HTML page to be viewed on the browser when accessing the localhost on port 7878.
-- Just like the previous commit, the TcpStream variable (named 'stream') is received through the parameters as a mutable variable, then the stream is read line-by-line until an empty line is found, signifying the end of the HTTP request header.
+- Just like the implementation on the previous commit, the TcpStream variable (named 'stream') is received through the parameters as a mutable variable, then the stream is read line-by-line until an empty line is found, signifying the end of the HTTP request header.
 - The status_line variable contains the HTTP 200 status code that indicates the request made was successful.
 - The contents variable utilizes fs::read_to_string("hello.html").unwrap(); in order to read the hello.html file's contents and save them in the form of a string.
 - The length variable gets the length of the file's contents by utilizing the len() method.
 - The response variable formats the HTTP response by utilizing the contents of the variables made beforehand and formatting them with format!(). The contents of 'status_line' becomes the status line, the contents of 'length' becomes the Content-length information for the headers, and the contents of 'contents' becomes the actual HTML file contents in the response body. Then, stream.write_all(response.as_bytes()).unwrap() returns the entire response to the browser. It converts the response (which is in the form of a string) into bytes and writes those bytes to the stream.
 - The use of unwrap() in this code is done to ensure that a proper result value is returned. If not, it would make the program panic with an error.
+
+### Commit 3 Reflection notes
+
+![](/images/module_6/milestone_3.png)
+
+- The modifications made to the handle_connections() method, as well as the creation of the 404.html file, allow for proper HTTP request URL validation and returning the appropriate response.
+- Instead of using the http_request variable to store the request in a vector and read it line-by-line, the request_line variable reads the first line of the request, which is the status line, utilizing .lines().next(). To make sure that the status line is returned properly, .unwrap().unwrap() is utilized so that the program panics with an error if it doesn't.
+- The (status_line, file_name) tuple performs a conditional statement that is meant to split the resulting HTTP response into two possibilities. If the request line stored in request_line is 'GET / HTTP/1.1', it will properly set the response status_line to the 200 OK status code and the file_name to the proper HTML file that should display on the webpage, which is hello.html. If the request status line consists of anything other than that, then the status_line will be set to the 404 NOT FOUND status code and the file_name will be set to the 404.html file, the error page that will be displayed on the webpage.
+- Just like the implementation on the previous commit, the contents, length, and response variables are utilized for the same purposes. stream.write_all(response.as_bytes()).unwrap() will still convert the formed response into bytes and write it to the stream, thus returning the entire response to the browser (and it makes sure that the proper results are returned, otherwise the program would panic with an error).
+- Before the refactoring was done, the two cases on the if and else blocks were quite repetitive and unnecessarily large.
+```bash
+    if request_line == "GET / HTTP/1.1" {
+        let status_line = "HTTP/1.1 200 OK";
+        let contents = fs::read_to_string("hello.html").unwrap();
+        let length = contents.len();
+        let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+        stream.write_all(response.as_bytes()).unwrap();
+    } else {
+        let status_line = "HTTP/1.1 404 NOT FOUND";
+        let contents = fs::read_to_string("404.html").unwrap();
+        let length = contents.len();
+        let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+        stream.write_all(response.as_bytes()).unwrap();
+    }
+```
+After receiving the correct status lines, both cases receive the contents of the appropriate HTML file as a string, receive the length of the contents, format the HTTP response, and write said response to the stream. In order to get rid of the unnecessary repetition of the code, refactoring needs to be done.
+```bash
+    let (status_line, file_name) =
+        if request_line == "GET / HTTP/1.1" {
+            ("HTTP/1.1 200 OK", "hello.html")
+        } else {
+            ("HTTP/1.1 404 NOT FOUND", "404.html")
+        };
+    let contents = fs::read_to_string(file_name).unwrap();
+    let length = contents.len();
+    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}");
+    stream.write_all(response.as_bytes()).unwrap();
+```
+I refactored the code by only inserting the values that differ between both cases into the conditional statement, which are the values for the response status line and the HTML file name. Afterward, the method execution continues by receiving the contents of the appropriate HTML file as a string, receiving the length of the contents, formatting the HTTP response, and writing said response to the stream. With those operations now taking place outside the if and else block, there is no unneeded duplication of the code.
